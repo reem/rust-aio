@@ -1,16 +1,29 @@
+//! The AioError type, AioResult alias, and associated utitilies.
+
 use std::io::IoError;
 use std::error::{FromError, Error};
 use std::fmt::{mod, Show};
 
+/// The Result alias used throughout `aio`.
 pub type AioResult<T> = Result<T, AioError>;
 
+/// The type used to indicate errors in IO operations.
+///
+/// It contains a static string description of the error, as well
+/// as a tag indicating the kind of the error. Mostly, `desc` should
+/// be used only for logging and you should always match on `kind`.
+// FIXME: This error type is 3 words. Benchmark and see if an internal box is faster.
 #[deriving(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct AioError {
+    /// A string description of the error meant for logging.
     pub desc: &'static str,
+
+    /// The type of this error, meant for disambiguating the error.
     pub kind: Kind
 }
 
 impl AioError {
+    /// Create a new AioError from the constituent parts.
     pub fn new(desc: &'static str, kind: Kind) -> AioError {
         AioError {
             desc: desc,
@@ -18,6 +31,7 @@ impl AioError {
         }
     }
 
+    /// Create a new AioError with the canonical error description.
     pub fn from_kind(kind: Kind) -> AioError {
         AioError {
             kind: kind,
@@ -43,10 +57,15 @@ impl AioError {
         }
     }
 
+    /// Create an AioError from a system errno.
+    ///
+    /// This uses the same decoding as `std::io::IoError` to
+    /// figure out the error kind.
     pub fn from_errno(errno: uint) -> AioError {
         FromError::from_error(IoError::from_errno(errno, false))
     }
 
+    /// Get the AioError best representing the latest errno.
     pub fn latest() -> AioError {
         use std::os;
 
@@ -101,6 +120,7 @@ impl FromError<AioError> for Box<Error> {
     fn from_error(aio: AioError) -> Box<Error> { box aio }
 }
 
+/// The kind of an AioError
 #[deriving(Copy, Clone, Show, PartialEq, Eq, Hash)]
 pub enum Kind {
     /// End of file or socket closed
