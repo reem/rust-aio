@@ -1,0 +1,10 @@
+[package]
+
+name = "aio"
+version = "0.0.1"
+authors = ["Jonathan Reem <jonathan.reem@gmail.com>"]
+repository = "https://github.com/reem/rust-aio.git"
+description = "Blazingly fast non-blocking IO."
+readme = "README.md"
+license = "MIT"
+
