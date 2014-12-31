@@ -4,6 +4,9 @@ use std::io::IoError;
 use std::error::{FromError, Error};
 use std::fmt::{mod, Show};
 
+use mio::{MioError, MioErrorKind};
+use nix::{SysError};
+
 /// The Result alias used throughout `aio`.
 pub type AioResult<T> = Result<T, AioError>;
 
@@ -113,6 +116,26 @@ impl FromError<IoError> for AioError {
                 StdKind::InvalidInput => Kind::InvalidInput,
             }
         }
+    }
+}
+
+impl FromError<MioError> for AioError {
+    fn from_error(mio: MioError) -> AioError {
+        match mio.kind {
+            MioErrorKind::Eof => AioError::from_kind(Kind::Eof),
+            MioErrorKind::WouldBlock => AioError::new("operation would block", Kind::Other),
+            MioErrorKind::AddrInUse => AioError::from_kind(Kind::AddressInUse),
+            MioErrorKind::BufUnderflow => AioError::new("wrote or read too little", Kind::Other),
+            MioErrorKind::BufOverflow => AioError::new("wrote or read too much", Kind::Other),
+            MioErrorKind::EventLoopTerminated => AioError::new("event loop terminated", Kind::Other),
+            MioErrorKind::OtherError => AioError::from_kind(Kind::Other),
+        }
+    }
+}
+
+impl FromError<SysError> for AioError {
+    fn from_error(sys: SysError) -> AioError {
+        FromError::from_error(MioError::from_sys_error(sys))
     }
 }
 

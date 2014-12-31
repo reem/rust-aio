@@ -12,8 +12,13 @@ extern crate log;
 extern crate event;
 extern crate mio;
 extern crate emitter;
+extern crate nix;
 
 pub use std::path;
+
+pub use path::{
+    Path
+};
 
 pub use error::{
     AioError,
@@ -21,4 +26,5 @@ pub use error::{
 };
 
 pub mod error;
+pub mod fs;
 
