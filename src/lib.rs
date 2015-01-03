@@ -1,5 +1,5 @@
-#![feature(phase, unboxed_closures)]
-#![deny(missing_docs, warnings)]
+#![feature(phase, unboxed_closures, globs)]
+#![deny(warnings)]
 
 //! Blazingly fast non-blocking IO.
 
@@ -26,5 +26,5 @@ pub use error::{
 };
 
 pub mod error;
-pub mod fs;
+pub mod sys;
 
