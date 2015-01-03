@@ -25,6 +25,11 @@ pub use error::{
     AioResult
 };
 
+pub use sys::{
+    IoHandle,
+    IoDesc
+};
+
 pub mod error;
 pub mod sys;
 

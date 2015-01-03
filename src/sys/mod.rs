@@ -1,4 +1,4 @@
-pub use mio::IoDesc;
+pub use mio::{IoDesc, IoHandle};
 
 pub mod socket;
 
