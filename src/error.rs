@@ -2,7 +2,7 @@
 
 use std::io::IoError;
 use std::error::{FromError, Error};
-use std::fmt::{mod, Show};
+use std::fmt::{self, Show};
 
 use mio::{MioError, MioErrorKind};
 use nix::{SysError};
@@ -16,7 +16,7 @@ pub type AioResult<T> = Result<T, AioError>;
 /// as a tag indicating the kind of the error. Mostly, `desc` should
 /// be used only for logging and you should always match on `kind`.
 // FIXME: This error type is 3 words. Benchmark and see if an internal box is faster.
-#[deriving(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct AioError {
     /// A string description of the error meant for logging.
     pub desc: &'static str,
@@ -144,7 +144,7 @@ impl FromError<AioError> for Box<Error> {
 }
 
 /// The kind of an AioError
-#[deriving(Copy, Clone, Show, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Show, PartialEq, Eq, Hash)]
 pub enum Kind {
     /// End of file or socket closed
     Eof,
