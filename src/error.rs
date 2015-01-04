@@ -55,6 +55,7 @@ impl AioError {
                 Kind::TemporaryFailure => "temporary failure (resource unavailable)",
                 Kind::IoUnavailable => "io unvailable on this thread",
                 Kind::InvalidInput => "invalid input for this operation",
+                Kind::WouldBlock => "operation would block",
                 Kind::Other => "unknown I/O error"
             }
         }
@@ -123,7 +124,7 @@ impl FromError<MioError> for AioError {
     fn from_error(mio: MioError) -> AioError {
         match mio.kind {
             MioErrorKind::Eof => AioError::from_kind(Kind::Eof),
-            MioErrorKind::WouldBlock => AioError::new("operation would block", Kind::Other),
+            MioErrorKind::WouldBlock => AioError::from_kind(Kind::WouldBlock),
             MioErrorKind::AddrInUse => AioError::from_kind(Kind::AddressInUse),
             MioErrorKind::BufUnderflow => AioError::new("wrote or read too little", Kind::Other),
             MioErrorKind::BufOverflow => AioError::new("wrote or read too much", Kind::Other),
@@ -193,6 +194,9 @@ pub enum Kind {
 
     /// A parameter for this operation was set incorrectly
     InvalidInput,
+
+    /// This operation was requested to be non-blocking but would block
+    WouldBlock,
 
     /// Some other error, should be used sparingly
     Other

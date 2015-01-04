@@ -33,3 +33,5 @@ pub use sys::{
 pub mod error;
 pub mod sys;
 
+mod register;
+
