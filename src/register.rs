@@ -1,6 +1,7 @@
 use {IoHandle, IoDesc};
 
 pub use mio::event::{ReadHint, Interest, PollOpt};
+pub use sys::register::EventHandler;
 
 pub trait Register {
     fn register(self);
