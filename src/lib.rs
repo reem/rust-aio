@@ -11,7 +11,6 @@ extern crate log;
 
 extern crate event;
 extern crate mio;
-extern crate emitter;
 extern crate nix;
 
 pub use std::path;
@@ -30,8 +29,14 @@ pub use sys::{
     IoDesc
 };
 
+pub use register::{
+    Evented,
+    Configured
+};
+
 pub mod error;
 pub mod sys;
+pub mod constants;
 
 mod register;
 
