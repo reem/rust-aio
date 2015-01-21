@@ -8,19 +8,11 @@ description = "Blazingly fast non-blocking IO."
 readme = "README.md"
 license = "MIT"
 
-[dependencies]
-log = "*"
-emitter = "*"
-
-[dependencies.event]
-version = "*"
-git = "https://github.com/reem/rust-event"
-
 [dependencies.mio]
-version = "*"
 git = "https://github.com/carllerche/mio"
 
-[dependencies.nix]
-version = "*"
-git = "https://github.com/carllerche/nix-rust"
+[dependencies.event]
+git = "https://github.com/reem/rust-event"
+
+log = "*"
 
