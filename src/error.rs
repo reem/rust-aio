@@ -2,10 +2,9 @@
 
 use std::io::IoError;
 use std::error::{FromError, Error};
-use std::fmt::{self, Show};
+use std::fmt;
 
 use mio::{MioError, MioErrorKind};
-use nix::{SysError};
 
 /// The Result alias used throughout `aio`.
 pub type AioResult<T> = Result<T, AioError>;
@@ -16,7 +15,7 @@ pub type AioResult<T> = Result<T, AioError>;
 /// as a tag indicating the kind of the error. Mostly, `desc` should
 /// be used only for logging and you should always match on `kind`.
 // FIXME: This error type is 3 words. Benchmark and see if an internal box is faster.
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Show, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct AioError {
     /// A string description of the error meant for logging.
     pub desc: &'static str,
@@ -65,7 +64,7 @@ impl AioError {
     ///
     /// This uses the same decoding as `std::io::IoError` to
     /// figure out the error kind.
-    pub fn from_errno(errno: uint) -> AioError {
+    pub fn from_errno(errno: usize) -> AioError {
         FromError::from_error(IoError::from_errno(errno, false))
     }
 
@@ -77,9 +76,9 @@ impl AioError {
     }
 }
 
-impl Show for AioError {
+impl fmt::String for AioError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "{}: {}", self.kind, self.desc)
+        write!(fmt, "{:?}: {}", self.kind, self.desc)
     }
 }
 
@@ -132,16 +131,6 @@ impl FromError<MioError> for AioError {
             MioErrorKind::OtherError => AioError::from_kind(Kind::Other),
         }
     }
-}
-
-impl FromError<SysError> for AioError {
-    fn from_error(sys: SysError) -> AioError {
-        FromError::from_error(MioError::from_sys_error(sys))
-    }
-}
-
-impl FromError<AioError> for Box<Error> {
-    fn from_error(aio: AioError) -> Box<Error> { box aio }
 }
 
 /// The kind of an AioError
