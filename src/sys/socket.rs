@@ -26,5 +26,5 @@ pub use mio::net::udp::{
 
 // Aliases
 pub use mio::net::SockAddr as SocketAddress;
-pub use std::io::net::ip::IpAddr;
+pub use std::old_io::net::ip::IpAddr;
 

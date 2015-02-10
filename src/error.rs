@@ -1,6 +1,6 @@
 //! The AioError type, AioResult alias, and associated utitilies.
 
-use std::io::IoError;
+use std::old_io::IoError;
 use std::error::{FromError, Error};
 use std::fmt;
 
@@ -15,7 +15,7 @@ pub type AioResult<T> = Result<T, AioError>;
 /// as a tag indicating the kind of the error. Mostly, `desc` should
 /// be used only for logging and you should always match on `kind`.
 // FIXME: This error type is 3 words. Benchmark and see if an internal box is faster.
-#[derive(Show, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct AioError {
     /// A string description of the error meant for logging.
     pub desc: &'static str,
@@ -76,7 +76,7 @@ impl AioError {
     }
 }
 
-impl fmt::String for AioError {
+impl fmt::Display for AioError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{:?}: {}", self.kind, self.desc)
     }
@@ -84,12 +84,11 @@ impl fmt::String for AioError {
 
 impl Error for AioError {
     fn description(&self) -> &str { self.desc }
-    fn detail(&self) -> Option<String> { None }
 }
 
 impl FromError<IoError> for AioError {
     fn from_error(io: IoError) -> AioError {
-        use std::io::IoErrorKind as StdKind;
+        use std::old_io::IoErrorKind as StdKind;
 
         AioError {
             desc: io.desc,
@@ -134,7 +133,7 @@ impl FromError<MioError> for AioError {
 }
 
 /// The kind of an AioError
-#[derive(Copy, Clone, Show, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Kind {
     /// End of file or socket closed
     Eof,

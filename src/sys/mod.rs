@@ -7,12 +7,12 @@ pub use self::register::{
 use mio::IoHandle as MioHandle;
 use AioResult;
 
-pub trait Read {
-    fn read(&mut self, buf: &[u8]) -> AioResult<uint>;
+pub trait IoRead {
+    fn read(&mut self, buf: &mut [u8]) -> AioResult<usize>;
 }
 
-pub trait Write {
-    fn write(&mut self, buf: &mut [u8]) -> AioResult<uint>;
+pub trait IoWrite {
+    fn write(&mut self, buf: &[u8]) -> AioResult<usize>;
 }
 
 // Replacement trait to allow implementations with IoHandle
@@ -30,4 +30,5 @@ impl<I: MioHandle> IoHandle for I {
 
 pub mod socket;
 pub mod register;
+pub mod rcmut;
 
