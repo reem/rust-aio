@@ -36,7 +36,7 @@ pub use register::{
 pub mod error;
 pub mod sys;
 pub mod constants;
-pub mod stream;
+pub mod iostream;
 pub mod buf {
     pub use mio::buf::{Buf, MutBuf, RingBuf,
                        RingBufReader, RingBufWriter};

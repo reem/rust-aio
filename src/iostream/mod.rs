@@ -142,5 +142,6 @@ fn incorrect_readable() -> ! {
     panic!("Received readable on a writable registration")
 }
 
-
+#[cfg(test)]
+mod test;
 
