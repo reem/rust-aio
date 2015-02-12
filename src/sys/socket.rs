@@ -12,6 +12,11 @@ pub use mio::net::{
     UnconnectedSocket
 };
 
+// Related Traits
+pub use mio::{
+    IoAcceptor
+};
+
 // Tcp utilities
 pub use mio::net::tcp::{
     TcpSocket,
@@ -25,6 +30,6 @@ pub use mio::net::udp::{
 };
 
 // Aliases
-pub use mio::net::SockAddr as SocketAddress;
+pub use mio::net::SockAddr as SocketAddr;
 pub use std::old_io::net::ip::IpAddr;
 

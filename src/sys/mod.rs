@@ -5,18 +5,33 @@ pub use self::register::{
 };
 
 use mio::IoHandle as MioHandle;
+use mio::IoReader as MioReader;
+use mio::IoWriter as MioWriter;
+
+use error::AioError;
 use AioResult;
 
-pub trait IoRead {
+pub trait IoRead: IoHandle {
     fn read(&mut self, buf: &mut [u8]) -> AioResult<usize>;
 }
 
-pub trait IoWrite {
+impl<I: MioReader + IoHandle> IoRead for I {
+    fn read(&mut self, buf: &mut [u8]) -> AioResult<usize> {
+        AioError::from_nonblock(self.read_slice(buf))
+    }
+}
+
+pub trait IoWrite: IoHandle {
     fn write(&mut self, buf: &[u8]) -> AioResult<usize>;
 }
 
-// Replacement trait to allow implementations with IoHandle
-// in this crate.
+impl<I: MioWriter + IoHandle> IoWrite for I {
+    fn write(&mut self, buf: &[u8]) -> AioResult<usize> {
+        AioError::from_nonblock(self.write_slice(buf))
+    }
+}
+
+// Replacement trait to allow certain implementations in this crate.
 pub trait IoHandle {
     fn desc(&self) -> &IoDesc;
 }
