@@ -1,4 +1,4 @@
-use register::{Registration, EventHandler, Register};
+use register::{Registration, Register};
 use constants::BUFFER_SIZE;
 
 use buf::{RingBuf, Buf, MutBuf};
@@ -25,11 +25,19 @@ pub trait IoDuplexStream: IoReadStream + IoWriteStream {
 }
 
 // Unique stream over an IO
-pub struct IoReader<I> {
+pub struct Io<I> {
     io: I
 }
 
-impl<I: EventHandler + IoRead> IoReadStream for IoReader<I> {
+impl<I: IoRead> Io<I> {
+    pub fn new(io: I) -> Io<I> {
+        Io {
+            io: io
+        }
+    }
+}
+
+impl<I: IoRead + 'static> IoReadStream for Io<I> {
     fn pipe<W>(self, write: W) where W: IoWriteStream {
         let backbuffer = RingBuf::new(BUFFER_SIZE);
 
@@ -44,17 +52,12 @@ impl<I: EventHandler + IoRead> IoReadStream for IoReader<I> {
             into_continue(write_from(unsafe { write_handle.borrow_mut() }, writer))
         };
 
-        Registration::new(self.io, on_read, |_: &mut I| incorrect_writable()).register();
+        Registration::new(self.io, on_read, move |_: &mut I| incorrect_writable()).register();
         write.on_write(on_write);
     }
 }
 
-// Unique writer to an IO
-pub struct IoWriter<I> {
-    io: I
-}
-
-impl<I: EventHandler + IoWrite> IoWriteStream for IoWriter<I> {
+impl<I: IoWrite + 'static> IoWriteStream for Io<I> {
     type Writer = WriterTo<I>;
 
     fn on_write<W: FnMut(&mut WriterTo<I>) -> bool + 'static>(self, mut listener: W) {
@@ -63,13 +66,13 @@ impl<I: EventHandler + IoWrite> IoWriteStream for IoWriter<I> {
             listener(&mut writer)
         };
 
-        Registration::new(self.io, |_: &mut I, _| incorrect_readable(), on_write).register();
+        Registration::new(self.io, move |_: &mut I, _| incorrect_readable(), on_write).register();
     }
 }
 
 struct WriterTo<I> {
     // Lies not 'static actually, but limited by the usage site.
-    io: *mut I
+    pub io: *mut I
 }
 
 impl<'a, I: IoWrite> FnMut<(&'a [u8],)> for WriterTo<I> {
@@ -104,14 +107,11 @@ fn read_to<I: IoRead>(io: &mut I, buffer: &mut RingBuf) -> AioResult<AsyncAction
 fn write_from<I: FnMut(&[u8]) -> AioResult<usize>>(from: &mut RingBuf, to: &mut I) -> AioResult<AsyncActionResult> {
     let mut reader = from.reader();
 
-    if !reader.has_remaining() { return Ok(MoreLater) }
-
     loop {
+        if !reader.has_remaining() { return Ok(MoreLater) }
+
         match to(reader.bytes()) {
-            Ok(n) => {
-                reader.advance(n);
-                if !reader.has_remaining() { return Ok(MoreLater) }
-            },
+            Ok(n) => reader.advance(n),
 
             Err(err) => {
                 return match err.kind {
