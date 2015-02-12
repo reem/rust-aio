@@ -14,7 +14,10 @@ pub struct Registration<I, R, W> {
     opts: (Interest, PollOpt)
 }
 
-impl<I, R, W> Registration<I, R, W> {
+impl<I, R, W> Registration<I, R, W>
+where I: IoHandle + 'static,
+      R: FnMut(&mut I, ReadHint) -> bool + 'static,
+      W: FnMut(&mut I) -> bool + 'static {
    #[inline]
    pub fn new(io: I, read: R, write: W) -> Registration<I, R, W> {
         Registration {
@@ -36,7 +39,9 @@ impl<I, R, W> Registration<I, R, W> {
             opts: (interest, opt)
         }
    }
+}
 
+impl<I, R, W> Registration<I, R, W> {
    #[inline]
    pub fn io(&self) -> &I { &self.io }
 }
@@ -56,8 +61,8 @@ where I: IoHandle + 'static,
 }
 
 impl<I, R, W> Evented for Registration<I, R, W>
-where R: FnMut(&mut I, ReadHint) -> bool,
-      W: FnMut(&mut I) -> bool {
+where R: FnMut(&mut I, ReadHint) -> bool + 'static,
+      W: FnMut(&mut I) -> bool + 'static {
    #[inline]
     fn readable(&mut self, hint: ReadHint) -> bool {
         (self.read)(&mut self.io, hint)
