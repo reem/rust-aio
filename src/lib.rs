@@ -47,6 +47,5 @@ pub mod buf {
 }
 
 mod register;
-mod internals;
 mod impls;
 
