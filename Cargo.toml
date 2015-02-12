@@ -14,6 +14,9 @@ git = "https://github.com/carllerche/mio"
 [dependencies.event]
 git = "https://github.com/reem/rust-event"
 
+[dependencies.syncbox]
+git = "https://github.com/reem/syncbox"
+
 [dependencies]
 log = "*"
 
