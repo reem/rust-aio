@@ -4,7 +4,7 @@ use std::old_io::IoError;
 use std::error::{FromError, Error};
 use std::fmt;
 
-use mio::{MioError, MioErrorKind};
+use mio::{MioError, MioErrorKind, MioResult, NonBlock};
 
 /// The Result alias used throughout `aio`.
 pub type AioResult<T> = Result<T, AioError>;
@@ -73,6 +73,17 @@ impl AioError {
         use std::os;
 
         AioError::from_errno(os::errno())
+    }
+
+    /// Lift a result from mio to AioResult
+    pub fn from_nonblock<T>(res: MioResult<NonBlock<T>>) -> AioResult<T> {
+        res.map_err(FromError::from_error).and_then(|block| {
+            if block.would_block() {
+                Err(AioError::from_kind(Kind::WouldBlock))
+            } else {
+                Ok(block.unwrap())
+            }
+        })
     }
 }
 
