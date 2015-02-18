@@ -12,11 +12,14 @@ license = "MIT"
 git = "https://github.com/carllerche/mio"
 
 [dependencies.event]
-git = "https://github.com/reem/rust-event"
+path = "../rust-event"
 
 [dependencies.syncbox]
-git = "https://github.com/reem/syncbox"
+git = "https://github.com/carllerche/syncbox"
 
 [dependencies]
 log = "*"
+
+[dev-dependencies]
+env_logger = "*"
 

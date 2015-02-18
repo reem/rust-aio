@@ -1,6 +1,7 @@
 use register::{Registration, Register, Interest, PollOpt};
 use iostream::{IoReadStream, IoWriteStream, Io};
-use eventstream::EventStream;
+use eventstream::{EventStream, AioEventStream};
+use future::AioFuture;
 use net::{IoAcceptor, SocketAddr};
 use sys::socket;
 
@@ -75,30 +76,32 @@ impl TcpAcceptor {
 impl IoAcceptor for TcpAcceptor {
     type Stream = TcpStream;
 
-    fn accept(self) -> EventStream<TcpStream, AioError> {
-        let (consumer, producer) = EventStream::pair();
-
-        // Option Dance
-        let mut producer = Some(producer);
+    fn accept(self) -> AioEventStream<TcpStream> {
+        let (producer, consumer) = EventStream::pair();
 
         Registration::with_opts(
             self.acceptor,
-            move |io, _| {
+            Some(producer),
+            move |io, producer, _| {
+                debug!("Accepting a connection from {:?}", io);
                 match AioError::from_nonblock(io.accept()) {
                     Ok(sock) => {
-                        producer.as_ref().unwrap().send(TcpStream::from_raw(sock));
+                        debug!("Connected to socket {:?}", sock);
+                        producer.take().unwrap().send(TcpStream::from_raw(sock));
                         true
                     },
                     Err(err) => {
+                        debug!("Error connecting to socket {:?}", err);
                         producer.take().unwrap().fail(err);
                         false
                     }
                 }
             },
-            |_| panic!(),
+            |_, _| panic!(),
             Interest::readable(),
             PollOpt::edge()
-        ).register();
+        // FIXME: unwrap
+        ).register().unwrap();
 
         consumer
     }
@@ -115,7 +118,10 @@ impl TcpStream {
 }
 
 impl IoReadStream for TcpStream {
-    fn pipe<W>(self, write: W) where W: IoWriteStream {
+    type PipeResult = ();
+
+    fn pipe<W>(self, write: W) -> AioFuture<()>
+    where W: IoWriteStream {
         self.stream.pipe(write)
     }
 }

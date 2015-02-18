@@ -1,5 +1,6 @@
 use {IoHandle, IoDesc, Evented, Configured};
 use register::{ReadHint, Interest, PollOpt};
+use event::EventResult;
 
 pub trait EventHandler: IoHandle + Evented + Configured + 'static {}
 impl<I: IoHandle + Evented + Configured + 'static> EventHandler for I {}
@@ -23,7 +24,7 @@ impl<I: EventHandler> ::event::Handler for AsHandler<I> {
     fn opt(&self) -> Option<PollOpt> { Some(self.0.cfg().1) }
 }
 
-pub fn register<E: EventHandler>(ev: E) {
+pub fn register<E: EventHandler>(ev: E) -> EventResult<()> {
     ::event::register(AsHandler(ev))
 }
 

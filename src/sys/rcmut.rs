@@ -3,9 +3,14 @@ use std::rc::Rc;
 use std::mem;
 
 /// A reference counted smart pointer with unrestricted mutability.
-#[derive(Clone)]
 pub struct RcMut<T> {
     inner: Rc<UnsafeCell<T>>
+}
+
+impl<T> Clone for RcMut<T> {
+    fn clone(&self) -> RcMut<T> {
+        RcMut { inner: self.inner.clone() }
+    }
 }
 
 impl<T> RcMut<T> {

@@ -46,4 +46,5 @@ impl<I: MioHandle> IoHandle for I {
 pub mod socket;
 pub mod register;
 pub mod rcmut;
+pub mod pipe;
 

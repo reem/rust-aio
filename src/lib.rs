@@ -1,4 +1,4 @@
-#![feature(unboxed_closures, core, io, hash, os)]
+#![feature(unboxed_closures, core, io, hash, os, collections)]
 #![cfg_attr(test, deny(warnings))]
 #![cfg_attr(test, feature(test))]
 
@@ -39,7 +39,9 @@ pub mod sys;
 pub mod constants;
 pub mod iostream;
 pub mod eventstream;
+pub mod future;
 pub mod net;
+pub mod pipe;
 pub mod util;
 pub mod buf {
     pub use mio::buf::{Buf, MutBuf, RingBuf,

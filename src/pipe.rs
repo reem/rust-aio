@@ -1,3 +1,4 @@
+use future::AioFuture;
 use iostream::{Io, IoReadStream, IoWriteStream};
 use sys::pipe;
 
@@ -12,28 +13,31 @@ pub fn pipe() -> AioResult<(PipeReader, PipeWriter)> {
 }
 
 pub struct PipeReader {
-    pipe: Io<pipe::PipeReader>
+    inner: Io<pipe::PipeReader>
 }
 
 impl PipeReader {
     pub fn from_raw(pipe: pipe::PipeReader) -> PipeReader {
-        PipeReader { pipe: Io::new(pipe) }
+        PipeReader { inner: Io::new(pipe) }
     }
 }
 
 pub struct PipeWriter {
-    pipe: Io<pipe::PipeWriter>
+    inner: Io<pipe::PipeWriter>
 }
 
 impl PipeWriter {
     pub fn from_raw(pipe: pipe::PipeWriter) -> PipeWriter {
-        PipeWriter { pipe: Io::new(pipe) }
+        PipeWriter { inner: Io::new(pipe) }
     }
 }
 
 impl IoReadStream for PipeReader {
-    fn pipe<W>(self, write: W) where W: IoWriteStream {
-        self.pipe.pipe(write)
+    type PipeResult = ();
+
+    fn pipe<W>(self, write: W) -> AioFuture<()>
+    where W: IoWriteStream {
+        self.inner.pipe(write)
     }
 }
 
@@ -42,7 +46,27 @@ impl IoWriteStream for PipeWriter {
 
     fn on_write<W>(self, listener: W)
     where W: FnMut(&mut <PipeWriter as IoWriteStream>::Writer) -> bool + 'static {
-        self.pipe.on_write(listener)
+        self.inner.on_write(listener)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pipe;
+    use IoReadStream;
+
+    #[test]
+    fn test_pipe() {
+        let (rd, wr) = pipe().unwrap();
+
+        ::event::next(move || {
+            let mut vec = vec![];
+            "hello".to_string().pipe(wr);
+            rd.pipe(&mut vec).map(move |()| {
+                assert_eq!(&vec[], b"hello")
+            });
+        }).unwrap();
+        ::event::run().unwrap();
     }
 }
 
