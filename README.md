@@ -1,6 +1,6 @@
 # aio
 
-> Blazingly fast non-blocking IO.
+> Asynchronous io utilities.
 
 ## Usage
 

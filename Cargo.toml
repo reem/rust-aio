@@ -4,15 +4,12 @@ name = "aio"
 version = "0.0.1"
 authors = ["Jonathan Reem <jonathan.reem@gmail.com>"]
 repository = "https://github.com/reem/rust-aio.git"
-description = "Blazingly fast non-blocking IO."
+description = "Asynchronous io utilities"
 readme = "README.md"
 license = "MIT"
 
 [dependencies.mio]
 git = "https://github.com/carllerche/mio"
-
-[dependencies.event]
-git = "https://github.com/reem/rust-event"
 
 [dependencies.syncbox]
 git = "https://github.com/reem/syncbox"
