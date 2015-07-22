@@ -1,7 +1,7 @@
-use register::{Registration, Register};
+use register::{Registration, Register, ReadHint};
 use constants::BUFFER_SIZE;
-
 use buf::{RingBuf, Buf, MutBuf};
+use future::{AioFuture, Future, Complete};
 
 use sys::rcmut::RcMut;
 use sys::{IoRead, IoWrite};
@@ -11,13 +11,17 @@ use self::AsyncActionResult::{Done, MoreLater};
 use {AioResult, error};
 
 pub trait IoReadStream {
-    fn pipe<W>(self, write: W) where W: IoWriteStream;
+    type PipeResult = Self;
+
+    fn pipe<W>(self, write: W) -> AioFuture<Self::PipeResult>
+    where W: IoWriteStream;
 }
 
 pub trait IoWriteStream {
     type Writer: FnMut(&[u8]) -> AioResult<usize>;
 
-    fn on_write<W: FnMut(&mut Self::Writer) -> bool + 'static>(self, W);
+    fn on_write<W>(self, W)
+    where W: FnMut(&mut Self::Writer) -> bool + 'static;
 }
 
 pub trait IoDuplexStream: IoReadStream + IoWriteStream {
@@ -29,7 +33,7 @@ pub struct Io<I> {
     io: I
 }
 
-impl<I: IoRead> Io<I> {
+impl<I> Io<I> {
     pub fn new(io: I) -> Io<I> {
         Io {
             io: io
@@ -38,35 +42,99 @@ impl<I: IoRead> Io<I> {
 }
 
 impl<I: IoRead + 'static> IoReadStream for Io<I> {
-    fn pipe<W>(self, write: W) where W: IoWriteStream {
-        let backbuffer = RingBuf::new(BUFFER_SIZE);
+    type PipeResult = ();
 
-        let mut read_handle = RcMut::new(backbuffer);
-        let mut write_handle = read_handle.clone();
+    fn pipe<W>(self, write: W) -> AioFuture<()>
+    where W: IoWriteStream {
+        let (producer, consumer) = Future::pair();
+        let buffer = RingBuf::new(BUFFER_SIZE);
 
-        let on_read = move |io: &mut I, _| {
-            into_continue(read_to(io, unsafe { read_handle.borrow_mut() }))
+        let on_read = move |io: &mut I, shared: &mut (RingBuf, Option<Complete<_, _>>), _| {
+            let (ref mut backbuffer, ref mut producer) = *shared;
+
+            match read_to(io, backbuffer) {
+                Ok(Done) => {
+                    producer.take().unwrap().complete(());
+                    false
+                },
+                Ok(MoreLater) => true,
+                Err(e) => {
+                    producer.take().unwrap().fail(e);
+                    return false;
+                }
+            }
         };
 
-        let on_write = move |writer: &mut <W as IoWriteStream>::Writer| {
-            into_continue(write_from(unsafe { write_handle.borrow_mut() }, writer))
+        let on_write = move |writer: &mut <W as IoWriteStream>::Writer,
+                             shared: &mut (RingBuf, Option<Complete<_, _>>)| {
+            let (ref mut backbuffer, ref mut producer) = *shared;
+
+            match write_from(backbuffer, writer) {
+                Ok(Done) => {
+                    producer.take().unwrap().complete(());
+                    false
+                },
+                Ok(MoreLater) => true,
+                Err(e) => {
+                    producer.take().unwrap().fail(e);
+                    return false;
+                }
+            }
         };
 
-        Registration::new(self.io, on_read, move |_: &mut I| incorrect_writable()).register();
-        write.on_write(on_write);
+        register_shared(
+            self.io,
+            (buffer, Some(producer)),
+            on_read,
+            move |_: &mut I, _| incorrect_writable(),
+            write,
+            on_write
+        );
+
+        consumer
     }
+}
+
+fn register_shared<I, S, R, W, Wr, WrC>(io: I, shared: S, mut read: R, mut write: W,
+                                        writer: Wr, mut on_write: WrC)
+where I: IoRead + 'static, S: 'static,
+      R: FnMut(&mut I, &mut S, ReadHint) -> bool + 'static,
+      W: FnMut(&mut I, &mut S) -> bool + 'static,
+      Wr: IoWriteStream,
+      WrC: FnMut(&mut <Wr as IoWriteStream>::Writer, &mut S) -> bool + 'static {
+
+    let mut shared = RcMut::new(shared);
+
+    Registration::new(
+        io,
+        shared.clone(),
+        move |io, shr, hint| read(io, unsafe { shr.borrow_mut() }, hint),
+        move |io, shr| write(io, unsafe { shr.borrow_mut() })
+    // FIXME: unwrap
+    ).register().unwrap();
+
+    writer.on_write(move |writer| {
+        on_write(writer, unsafe { shared.borrow_mut() })
+    });
 }
 
 impl<I: IoWrite + 'static> IoWriteStream for Io<I> {
     type Writer = WriterTo<I>;
 
-    fn on_write<W: FnMut(&mut WriterTo<I>) -> bool + 'static>(self, mut listener: W) {
-        let on_write = move |io: &mut I| {
+    fn on_write<W>(self, mut listener: W)
+    where W: FnMut(&mut WriterTo<I>) -> bool + 'static {
+        let on_write = move |io: &mut I, &mut (): &mut ()| {
             let mut writer = WriterTo { io: io };
             listener(&mut writer)
         };
 
-        Registration::new(self.io, move |_: &mut I, _| incorrect_readable(), on_write).register();
+        Registration::new(
+            self.io,
+            (),
+            move |_: &mut I, &mut (), _| incorrect_readable(),
+            on_write
+        // FIXME: unwrap
+        ).register().unwrap();
     }
 }
 
@@ -125,14 +193,6 @@ fn write_from<I: FnMut(&[u8]) -> AioResult<usize>>(from: &mut RingBuf, to: &mut 
 }
 
 enum AsyncActionResult { Done, MoreLater }
-
-fn into_continue(res: AioResult<AsyncActionResult>) -> bool {
-    match res {
-        Ok(Done) => false,
-        Ok(MoreLater) => true,
-        Err(_) => false
-    }
-}
 
 fn incorrect_writable() -> ! {
     panic!("Received writable on a readable registration")

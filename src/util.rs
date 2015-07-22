@@ -1,3 +1,4 @@
+use future::{AioFuture, Future};
 use error::Kind;
 use {IoReadStream, IoWriteStream};
 
@@ -30,24 +31,41 @@ impl MemReader {
 }
 
 impl IoReadStream for MemReader {
-    fn pipe<W>(mut self, write: W) where W: IoWriteStream {
+    type PipeResult = MemReader;
+
+    fn pipe<W>(self, write: W) -> AioFuture<MemReader>
+    where W: IoWriteStream {
+        let (producer, consumer) = Future::pair();
+        let mut producer = Some(producer);
+        let mut this = Some(self);
+
         write.on_write(move |writer| {
             loop {
-                if self.done() { return false }
+                if this.as_ref().unwrap().done() { return false }
 
-                match writer(self.as_bytes()) {
-                    Ok(n) => { self.offset += n; },
+                match writer(this.as_ref().unwrap().as_bytes()) {
+                    Ok(n) => { this.as_mut().unwrap().offset += n; },
 
                     Err(err) => {
                         return match err.kind {
-                            Kind::Eof => false,
+                            Kind::Eof => {
+                                producer.take().unwrap().complete(this.take().unwrap());
+                                true
+                            },
+
                             Kind::WouldBlock => true,
-                            _ => false
+
+                            _ => {
+                                producer.take().unwrap().fail(err);
+                                false
+                            }
                         };
                     }
                 }
-            }
-        })
+            };
+        });
+
+        consumer
     }
 }
 
