@@ -11,9 +11,6 @@ license = "MIT"
 [dependencies.mio]
 git = "https://github.com/carllerche/mio"
 
-[dependencies.syncbox]
-git = "https://github.com/reem/syncbox"
-
 [dependencies]
 log = "*"
 
