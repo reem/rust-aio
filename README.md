@@ -1,6 +1,6 @@
 # aio
 
-> Asynchronous io utilities.
+> Lightweight framework for nonblocking io and general eventing.
 
 ## Usage
 

@@ -4,7 +4,7 @@ name = "aio"
 version = "0.0.1"
 authors = ["Jonathan Reem <jonathan.reem@gmail.com>"]
 repository = "https://github.com/reem/rust-aio.git"
-description = "Asynchronous io utilities"
+description = "Lightweight nonblocking io and eventing framework."
 readme = "README.md"
 license = "MIT"
 
