@@ -15,8 +15,7 @@ use mio::util::Slab;
 pub trait EventMachine<S: Source<Self, Event=Self::Event>> {
     type Event;
 
-    fn advance(&mut self, source: &mut S, event: Self::Event);
-}
+mod reactor;
 
 pub trait Source<E: EventMachine<Self, Event=Self::Event>> {
     type Event;
